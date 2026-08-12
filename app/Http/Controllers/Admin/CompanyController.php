@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\AdminDashboardCache;
 use Illuminate\Http\Request;
 
 class CompanyController extends Controller
@@ -41,7 +42,10 @@ class CompanyController extends Controller
             'company_id' => $company->id,
         ]);
 
-        return redirect()->back()->with('success', 'Wing created successfully');
+        AdminDashboardCache::flush();
+
+        return redirect()->route('admin.files.index', ['view' => 'sub-companies'])
+            ->with('success', 'Wing created successfully');
     }
 
     public function update(Request $request, string $id)
@@ -86,7 +90,10 @@ class CompanyController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('success', 'Wing updated successfully');
+        AdminDashboardCache::flush($company->id);
+
+        return redirect()->route('admin.files.index', ['view' => 'sub-companies'])
+            ->with('success', 'Wing updated successfully');
     }
 
     public function toggleStatus(string $id)
@@ -95,7 +102,10 @@ class CompanyController extends Controller
         $company->is_active = !($company->is_active ?? true);
         $company->save();
 
-        return redirect()->back()->with('success', 'Wing status updated successfully');
+        AdminDashboardCache::flush($company->id);
+
+        return redirect()->route('admin.files.index', ['view' => 'sub-companies'])
+            ->with('success', 'Wing status updated successfully');
     }
 
     public function loginAs(string $id)
@@ -141,8 +151,12 @@ class CompanyController extends Controller
     public function destroy(string $id)
     {
         $company = \App\Models\Company::findOrFail($id);
+        $companyId = $company->id;
         $company->delete();
 
-        return redirect()->back()->with('success', 'Company deleted successfully');
+        AdminDashboardCache::flush($companyId);
+
+        return redirect()->route('admin.files.index', ['view' => 'sub-companies'])
+            ->with('success', 'Company deleted successfully');
     }
 }

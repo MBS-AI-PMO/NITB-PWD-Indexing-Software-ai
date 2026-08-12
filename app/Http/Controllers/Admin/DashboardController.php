@@ -17,10 +17,10 @@ class DashboardController extends Controller
         $user = Auth::user();
         
         if ($user->role === 'admin') {
-            // Cache the heavy admin dashboard calculations in Redis
+            // Cache the heavy admin dashboard calculations (uses CACHE_STORE from .env)
             $cacheKey = 'dashboard:admin';
 
-            $data = Cache::store('redis')->remember($cacheKey, now()->addMinutes(5), function () {
+            $data = Cache::remember($cacheKey, now()->addMinutes(5), function () {
                 // Calculate total storage used across all companies
                 $totalStorageBytes = 0;
                 $allDocuments = Document::all();
@@ -116,7 +116,7 @@ class DashboardController extends Controller
             $companyId = $user->company_id;
             $cacheKey = 'dashboard:company:'.$companyId;
 
-            $data = Cache::store('redis')->remember($cacheKey, now()->addMinutes(5), function () use ($companyId) {
+            $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($companyId) {
                 // Calculate total storage used
                 $totalStorageBytes = 0;
                 $documents = Document::where('company_id', $companyId)->get();

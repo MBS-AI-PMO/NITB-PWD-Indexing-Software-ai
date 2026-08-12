@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Services\PdfProcessingService;
 use App\Services\SearchablePdfService;
+use App\Support\AdminDashboardCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
@@ -30,8 +31,8 @@ class DocumentController extends Controller
         $categories = \App\Models\Category::all();
         
         if ($user->role === 'admin') {
-            // Cache expensive companies + storage data for admin in Redis
-            $companies = Cache::store('redis')->remember('files:companies_with_storage', now()->addMinutes(5), function () {
+            // Cache expensive companies + storage data (uses CACHE_STORE from .env)
+            $companies = Cache::remember('files:companies_with_storage', now()->addMinutes(5), function () {
                 $companies = \App\Models\Company::with(['adminUser'])->withCount(['documents', 'folders'])->get();
 
                 foreach ($companies as $company) {
@@ -271,6 +272,8 @@ class DocumentController extends Controller
         ]);
 
         // IMMEDIATE response - no waiting for processing
+        AdminDashboardCache::flush((int) $validated['company_id']);
+
         return redirect()->back()->with('success', 'Document uploaded successfully! PDF conversion and text extraction are processing in the background.');
     }
 
@@ -707,7 +710,10 @@ class DocumentController extends Controller
         if ($document->file_path) {
             \Illuminate\Support\Facades\Storage::disk('public')->delete($document->file_path);
         }
+        $companyId = $document->company_id;
         $document->delete();
+
+        AdminDashboardCache::flush($companyId);
 
         return redirect()->back()->with('success', 'Document deleted successfully');
     }
